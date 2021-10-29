@@ -31,6 +31,8 @@
 *.out
 *.app
 convolution
+mkRandomMatrix
+getMatrix
 
 # Environment files
 .vscode
@@ -39,3 +41,4 @@ convolution
 getMatrix.c
 mkRandomMatrix.c
 test_matrix
+old-makefile.txt
