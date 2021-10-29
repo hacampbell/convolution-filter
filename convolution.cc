@@ -11,7 +11,7 @@
  *                  numThreads  - the number of threads to use for the program 
  * 
  * USAGE:           Compile the program using either g++ or makefile
- *                      > g++ -pthread  convolution.cc -o convolution
+ *                      > g++ -pthread convolution.cc -o convolution
  *                  OR
  *                      > make
  * 
@@ -25,6 +25,7 @@
 #include <pthread.h>    // Threads
 #include <sys/types.h>  // Thread ID types  
 #include <string>       // Strings
+#include <math.h>       // Used for sqrt
 
 using namespace std;
 
@@ -70,6 +71,47 @@ int ProcessArguments (int argc, char** argv, string* file, int* dpth, int* nTh) 
     return 0;
 }
 
+/******************************************************************************
+ * NAME:            GetMatrixDimension
+ * 
+ * DESCRIPTION:     Gets the dimension used in a given matrix file. Note that
+ *                  this function will not work for files over 2 GB, and is
+ *                  only applicable to square matrixes e.g. a 4x4 matrix
+ * 
+ * PARAMETERS:      char* filename - the name of the matrix file
+ * 
+ * RETURNS:         int - the dimension of the matrix e.g. 5 for a 5x5 matrix
+ *****************************************************************************/
+int GetMatrixDimension (/*char* filename[STRLEN]*/ string filenameStr) {
+    int size;
+    int dimension;
+
+    const char* filename = filenameStr.c_str();
+
+    FILE* file = fopen(filename, "r");
+
+    if (file == NULL) {
+        printf("[ERROR] Could not open file '%s'\n", filename);
+        exit(1);
+    }
+
+    if (fseek(file, 0, SEEK_END) != 0) {
+        printf("[ERROR] Could not get dimension for file '%s'\n", filename);
+        exit(1);
+    }
+
+    size = ftell(file);
+    if (size == -1) {
+        printf("[ERROR] Could not get dimension for file '%s'\n", filename);
+        exit(1);
+    }
+
+    fclose(file);
+
+    dimension = size / 4;
+    return sqrt(dimension);
+}
+
 
 /******************************************************************************
  * NAME:            main
@@ -81,6 +123,7 @@ int main (int argc, char** argv) {
     string filename;
     int filterDepth;
     int numThreads;
+    int matrixDimension;
 
     if (ProcessArguments(argc, argv, &filename, &filterDepth, &numThreads) != 0) {
         cout << "\nProgram exiting..." << endl;
@@ -89,6 +132,11 @@ int main (int argc, char** argv) {
 
     cout << "file: " << filename << " depth: " << filterDepth << " threads: ";
     cout << numThreads << endl;
+
+
+    matrixDimension = GetMatrixDimension(filename);
+
+    printf("Matrix dimension for '%s' was %d\n", filename.c_str(), matrixDimension);
 
 	return 0;
 }
