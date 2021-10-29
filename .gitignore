@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+# Files used for local testing
+getMatrix.c
+mkRandomMatrix.c
+test_matrix
