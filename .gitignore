@@ -30,6 +30,7 @@
 *.exe
 *.out
 *.app
+convolution
 
 # Environment files
 .vscode
