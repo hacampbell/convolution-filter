@@ -31,6 +31,9 @@
 *.out
 *.app
 
+# Environment files
+.vscode
+
 # Files used for local testing
 getMatrix.c
 mkRandomMatrix.c
