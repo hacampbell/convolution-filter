@@ -21,11 +21,21 @@
  *                      > make run
 *****************************************************************************/
 
+// TODO:    
+//          Pad matrix with 0's so we can more easily work with it
+//          Split matrix rows between given number of threads
+//          Have threads calculate their the new values for their given row(s)
+//          Have threads insert their new rows into a new 2D array
+//          Display the new array, and we're done
+
 #include <iostream>     // Basic IO
 #include <pthread.h>    // Threads
 #include <sys/types.h>  // Thread ID types  
 #include <string>       // Strings
 #include <math.h>       // Used for sqrt
+#include "matrix.h"     // Used for matrix operations
+#include <fcntl.h>      // Used for file reading
+#include <unistd.h>     // Used for O_RDONLY
 
 using namespace std;
 
@@ -41,17 +51,17 @@ using namespace std;
  *                  int*    :   dpth    -   variable to store the filter depth
  *                  int*    :   nTh     -   varible to store number of threads             
  *        
- * RETURNS:         0 if the given arguments were valid, 1 with console output
- *                  otherwise.
+ * RETURNS:         Void, but exits the program if incorrect values have been
+ *                  given
  *****************************************************************************/ 
-int ProcessArguments (int argc, char** argv, string* file, int* dpth, int* nTh) {
+void ProcessArguments (int argc, char** argv, string* file, int* dpth, int* nTh) {
     // Check we've been given the correct number of arguments
     if (argc < 4) {
         cout << "[ERROR] Invalid number of arguments given." << endl;
         cout << "Usage:" << endl;
         cout << "\tconvolution [matrixFile] [filterDepth] [numThreads]" << endl;
         
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     // Check we've been given numbers for depth and numThreads
@@ -61,14 +71,12 @@ int ProcessArguments (int argc, char** argv, string* file, int* dpth, int* nTh) 
         cout << "\tconvolution [matrixFile] [filterDepth] [numThreads]" << endl;
         cout << "Where filterDepth and numThreads are ints > 0" << endl;
         
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     *file = argv[1];
     *dpth = atoi(argv[2]);
     *nTh = atoi(argv[3]);
-
-    return 0;
 }
 
 /******************************************************************************
@@ -78,11 +86,11 @@ int ProcessArguments (int argc, char** argv, string* file, int* dpth, int* nTh) 
  *                  this function will not work for files over 2 GB, and is
  *                  only applicable to square matrixes e.g. a 4x4 matrix
  * 
- * PARAMETERS:      char* filename - the name of the matrix file
+ * PARAMETERS:      string  :   filenameStr    -   the name of the matrix file
  * 
  * RETURNS:         int - the dimension of the matrix e.g. 5 for a 5x5 matrix
  *****************************************************************************/
-int GetMatrixDimension (/*char* filename[STRLEN]*/ string filenameStr) {
+int GetMatrixDimension (string filenameStr) {
     int size;
     int dimension;
 
@@ -112,6 +120,55 @@ int GetMatrixDimension (/*char* filename[STRLEN]*/ string filenameStr) {
     return sqrt(dimension);
 }
 
+/******************************************************************************
+ * NAME:            ReadMatrixFile
+ * 
+ * DESCRIPTION:     Reads in a matrix from a given file
+ * 
+ * PARAMETERS:      string  :   filenameStr -   the name of the matrix file
+ *                  int     :   matDim      -   dimension of square matrix
+ * 
+ * RETURNS:         int**   : matrix2D      -   a pointer to the 2D array
+ *****************************************************************************/
+int** ReadMatrixFile (string filenameStr, int matDim) {
+    int fd;
+    int **matrix2D = 0;
+    matrix2D = new int*[matDim];
+
+    const char* filename = filenameStr.c_str();
+
+    cout << "Reading matrix from file " << filenameStr << endl;
+
+    if((fd = open(filename, O_RDONLY)) == -1){
+        cout << "Failed to read file descriptor for " << filename << endl;
+        exit(1); 
+    }
+
+    for (int i = 0; i < matDim; i++) {
+        matrix2D[i] = new int[matDim];
+        get_row(fd, matDim, i+1, matrix2D[i]);
+    }
+
+   return matrix2D;
+
+}
+
+/******************************************************************************
+ * NAME:            CleanupMatrix
+ * DESCRIPTION:     Cleans up the memory allocated for a 2D matrix
+ * PARAMETERS:      int**   :   matrix      - the matrix to cleanup
+ *                  int     ;   matrixDim   - the dimension of the matrix
+ * RETURNS:         void
+ *****************************************************************************/ 
+void CleanupMatrix (int** matrix, int matrixDim) {
+    for (int i = 0; i < matrixDim; i++) {
+        delete[] matrix[i];
+    }
+
+    delete[] matrix;
+    matrix = 0;
+}
+
 
 /******************************************************************************
  * NAME:            main
@@ -124,19 +181,29 @@ int main (int argc, char** argv) {
     int filterDepth;
     int numThreads;
     int matrixDimension;
+    int** matrix;
 
-    if (ProcessArguments(argc, argv, &filename, &filterDepth, &numThreads) != 0) {
-        cout << "\nProgram exiting..." << endl;
-        return 0;
-    }
+    // Check we've been given good arguments
+    ProcessArguments(argc, argv, &filename, &filterDepth, &numThreads);
 
     cout << "file: " << filename << " depth: " << filterDepth << " threads: ";
     cout << numThreads << endl;
 
 
+    // Get our matrix dimensions
     matrixDimension = GetMatrixDimension(filename);
-
     printf("Matrix dimension for '%s' was %d\n", filename.c_str(), matrixDimension);
 
+    // Read the matrix file itself
+    matrix = ReadMatrixFile(filename, matrixDimension);
+
+    for (int i = 0; i < matrixDimension; i++) {
+        for (int j = 0; j < matrixDimension; j++) {
+            cout << matrix[i][j] << "\t";
+        }
+        cout << endl;
+    }
+
+    CleanupMatrix(matrix, matrixDimension);
 	return 0;
 }
