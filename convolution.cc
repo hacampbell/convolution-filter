@@ -1,4 +1,4 @@
-/******************************************************************************
+/***********************************************************************************
  * FILENAME:        convolution.cc
  * 
  * AUTHOR:          Henry Campbell
@@ -19,14 +19,7 @@
  *                      > ./convolution [matrixFile] [depth] [numThreads]
  *                  OR
  *                      > make run
-*****************************************************************************/
-
-// TODO:    
-//          Pad matrix with 0's so we can more easily work with it
-//          Split matrix rows between given number of threads
-//          Have threads calculate their the new values for their given row(s)
-//          Have threads insert their new rows into a new 2D array
-//          Display the new array, and we're done
+***********************************************************************************/
 
 #include <iostream>     // Basic IO
 #include <pthread.h>    // Threads
@@ -39,7 +32,28 @@
 
 using namespace std;
 
-/******************************************************************************
+/***********************************************************************************
+ * NAME:            PrettyPrintMatrix
+ * 
+ * DESCRIPTION:     Pretty prints a given square matrix (represented by a 2D array)
+ *                  out to the console
+ * 
+ * PARAMETERS:      int**   :   matrix      -   the matrix to print
+ *                  int     :   matrixDim   -   the dimension of the matrix           
+ *        
+ * RETURNS:         Void, but exits the program if incorrect values have been
+ *                  given
+ **********************************************************************************/ 
+void PrettyPrintMatrix (int** matrix, int matrixDim) {
+    for (int i = 0; i < matrixDim; i++) {
+        for (int j = 0; j < matrixDim; j++) {
+            cout << matrix[i][j] << "\t";
+        }
+        cout << endl;
+    }
+}
+
+/***********************************************************************************
  * NAME:            ProcessArguments
  * 
  * DESCRIPTION:     Used to process and check the validity of the programs
@@ -53,7 +67,7 @@ using namespace std;
  *        
  * RETURNS:         Void, but exits the program if incorrect values have been
  *                  given
- *****************************************************************************/ 
+ **********************************************************************************/ 
 void ProcessArguments (int argc, char** argv, string* file, int* dpth, int* nTh) {
     // Check we've been given the correct number of arguments
     if (argc < 4) {
@@ -79,7 +93,7 @@ void ProcessArguments (int argc, char** argv, string* file, int* dpth, int* nTh)
     *nTh = atoi(argv[3]);
 }
 
-/******************************************************************************
+/***********************************************************************************
  * NAME:            GetMatrixDimension
  * 
  * DESCRIPTION:     Gets the dimension used in a given matrix file. Note that
@@ -89,7 +103,7 @@ void ProcessArguments (int argc, char** argv, string* file, int* dpth, int* nTh)
  * PARAMETERS:      string  :   filenameStr    -   the name of the matrix file
  * 
  * RETURNS:         int - the dimension of the matrix e.g. 5 for a 5x5 matrix
- *****************************************************************************/
+ **********************************************************************************/
 int GetMatrixDimension (string filenameStr) {
     int size;
     int dimension;
@@ -120,7 +134,7 @@ int GetMatrixDimension (string filenameStr) {
     return sqrt(dimension);
 }
 
-/******************************************************************************
+/***********************************************************************************
  * NAME:            ReadMatrixFile
  * 
  * DESCRIPTION:     Reads in a matrix from a given file
@@ -129,7 +143,7 @@ int GetMatrixDimension (string filenameStr) {
  *                  int     :   matDim      -   dimension of square matrix
  * 
  * RETURNS:         int**   : matrix2D      -   a pointer to the 2D array
- *****************************************************************************/
+ **********************************************************************************/
 int** ReadMatrixFile (string filenameStr, int matDim) {
     int fd;
     int **matrix2D = 0;
@@ -153,13 +167,13 @@ int** ReadMatrixFile (string filenameStr, int matDim) {
 
 }
 
-/******************************************************************************
+/***********************************************************************************
  * NAME:            CleanupMatrix
  * DESCRIPTION:     Cleans up the memory allocated for a 2D matrix
  * PARAMETERS:      int**   :   matrix      - the matrix to cleanup
  *                  int     ;   matrixDim   - the dimension of the matrix
  * RETURNS:         void
- *****************************************************************************/ 
+ **********************************************************************************/ 
 void CleanupMatrix (int** matrix, int matrixDim) {
     for (int i = 0; i < matrixDim; i++) {
         delete[] matrix[i];
@@ -169,13 +183,19 @@ void CleanupMatrix (int** matrix, int matrixDim) {
     matrix = 0;
 }
 
+// TODO:    
+//          Pad matrix with 0's so we can more easily work with it
+//          Split matrix rows between given number of threads
+//          Have threads calculate their the new values for their given row(s)
+//          Have threads insert their new rows into a new 2D array
+//          Display the new array, and we're done
 
-/******************************************************************************
+/***********************************************************************************
  * NAME:            main
  * DESCRIPTION:     Entrypoint for the program.
  * PARAMETERS:      None
  * RETURNS:         0 on success, an error status otherwise.
- *****************************************************************************/ 
+ **********************************************************************************/ 
 int main (int argc, char** argv) {
     string filename;
     int filterDepth;
@@ -197,12 +217,7 @@ int main (int argc, char** argv) {
     // Read the matrix file itself
     matrix = ReadMatrixFile(filename, matrixDimension);
 
-    for (int i = 0; i < matrixDimension; i++) {
-        for (int j = 0; j < matrixDimension; j++) {
-            cout << matrix[i][j] << "\t";
-        }
-        cout << endl;
-    }
+    PrettyPrintMatrix(matrix, matrixDimension);
 
     CleanupMatrix(matrix, matrixDimension);
 	return 0;
