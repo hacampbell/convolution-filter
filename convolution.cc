@@ -21,11 +21,18 @@
  *                      > make run
 ***********************************************************************************/
 
+// TODO:    
+//          Pad matrix with 0's so we can more easily work with it
+//          Split matrix rows between given number of threads
+//          Have threads calculate their the new values for their given row(s)
+//          Have threads insert their new rows into a new 2D array
+//          Display the new array, and we're done
+
 #include <iostream>     // Basic IO
 #include <pthread.h>    // Threads
 #include <sys/types.h>  // Thread ID types  
 #include <string>       // Strings
-#include <math.h>       // Used for sqrt
+#include <math.h>       // Used for sqrt, ceil
 #include "matrix.h"     // Used for matrix operations
 #include <fcntl.h>      // Used for file reading
 #include <unistd.h>     // Used for O_RDONLY
@@ -151,7 +158,7 @@ int** ReadMatrixFile (string filenameStr, int matDim) {
 
     const char* filename = filenameStr.c_str();
 
-    cout << "Reading matrix from file " << filenameStr << endl;
+    printf("Reading matrix from file '%s'\n", filename);
 
     if((fd = open(filename, O_RDONLY)) == -1){
         cout << "Failed to read file descriptor for " << filename << endl;
@@ -183,12 +190,53 @@ void CleanupMatrix (int** matrix, int matrixDim) {
     matrix = 0;
 }
 
-// TODO:    
-//          Pad matrix with 0's so we can more easily work with it
-//          Split matrix rows between given number of threads
-//          Have threads calculate their the new values for their given row(s)
-//          Have threads insert their new rows into a new 2D array
-//          Display the new array, and we're done
+/***********************************************************************************
+ * NAME:            GetMatrixWork
+ * 
+ * DESCRIPTION:     Determines the rows a given thread should perform calculations
+ *                  on
+ * 
+ * PARAMETERS:      int**   :   matrix      -   the matrix that we're working on
+ *                  int     :   matrixDim   -   the dimension of the matrix
+ *                  int     :   numT        -   the number of threads being used
+ *                  int     :   tid         -   the ID for this thread
+ * 
+ * RETURNS:         
+ **********************************************************************************/ 
+void GetMatrixWork (int** matrix, int matrixDim, int numT, int tid, int* startP, int* endP) {
+    int remainder = 0;
+    int workload = 0;
+    int start;
+    int end;
+
+    // Determine the number of rows a thread has to perform work on, and how many
+    // rows are going to be left over after initial even distribution
+    if (numT >= matrixDim) {
+        workload = 1;
+    } else {
+        remainder = matrixDim % numT;
+        workload = floor(matrixDim / numT);
+    }
+
+    // Determine the start and end rows that we should be working on
+    start = workload * tid;
+    end = workload * (tid + 1);
+
+    // If we're the final thread handle any remainder
+    if (tid == numT - 1) {
+        end += remainder;
+    }
+
+    // Special case for when we're supposed to make more threads than rows in matrix
+    if (tid >= matrixDim) {
+        start = -1;
+        end = -1;
+    }
+
+    //cout << "Thread " << tid << " start " << start << " end " << end << endl;
+    *startP = start;
+    *endP = end;
+}
 
 /***********************************************************************************
  * NAME:            main
@@ -206,7 +254,7 @@ int main (int argc, char** argv) {
     // Check we've been given good arguments
     ProcessArguments(argc, argv, &filename, &filterDepth, &numThreads);
 
-    cout << "file: " << filename << " depth: " << filterDepth << " threads: ";
+    cout << "\nfile: " << filename << " depth: " << filterDepth << " threads: ";
     cout << numThreads << endl;
 
 
@@ -217,8 +265,18 @@ int main (int argc, char** argv) {
     // Read the matrix file itself
     matrix = ReadMatrixFile(filename, matrixDimension);
 
+    // Distribute Matrix Work
+    for (int i = 0; i < numThreads; i++) {
+        int start, end;
+        GetMatrixWork(matrix, matrixDimension, numThreads, i, &start, &end);
+        printf("Thread: %d Start: %d End: %d\n", i, start, end);
+    }
+
+
+    cout << endl;
     PrettyPrintMatrix(matrix, matrixDimension);
 
+    // Clean up before we exit, no memory leaks please
     CleanupMatrix(matrix, matrixDimension);
 	return 0;
 }
