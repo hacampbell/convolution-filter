@@ -39,6 +39,14 @@
 
 using namespace std;
 
+// Structure used for passing arguments to thread entry functions
+struct argument_structure {
+    int** matrix;
+    int matrixDim;
+    int numT;
+    int tid;
+};
+
 /***********************************************************************************
  * NAME:            PrettyPrintMatrix
  * 
@@ -161,7 +169,7 @@ int** ReadMatrixFile (string filenameStr, int matDim) {
     printf("Reading matrix from file '%s'\n", filename);
 
     if((fd = open(filename, O_RDONLY)) == -1){
-        cout << "Failed to read file descriptor for " << filename << endl;
+        printf("Failed to read file descriptor for %s\n", filename);
         exit(1); 
     }
 
@@ -251,30 +259,38 @@ void GetMatrixWork (int matrixDim, int numT, int tid, int* startP, int* endP) {
  * 
  * RETURNS:         
  **********************************************************************************/ 
-void CalculateFilter (int** matrix, int matrixDim, int numT, int tid) {
-    int start;
-    int end;
+// void* CalculateFilter (int** matrix, int matrixDim, int numT, int tid) {
+//     int start;
+//     int end;
 
-    // Find our start and end points
-    GetMatrixWork(matrixDim, numT, tid, &start, &end);
+//     // Find our start and end points
+//     GetMatrixWork(matrixDim, numT, tid, &start, &end);
     
-    // If we have no work, break out
-    if (start == -1 && end == -1)
-        return;
+//     // If we have no work, break out
+//     if (start == -1 && end == -1)
+//         return;
     
-    // Just print out the rows we're supposed to work on for now
-    printf("Thread %d of %d\n", tid, numT);
+//     // Just print out the rows we're supposed to work on for now
+//     printf("Thread %d of %d\n", tid, numT);
 
-    for (int row = start; row < end; row++) {
-        for (int i = 0; i < matrixDim; i++) {
-            cout << matrix[row][i] << "\t";
-        }
-        cout << endl;
-    }
+//     for (int row = start; row < end; row++) {
+//         for (int i = 0; i < matrixDim; i++) {
+//             cout << matrix[row][i] << "\t";
+//         }
+//         cout << endl;
+//     }
 
-    // Next step is to break this out into being a thread entry point and to
-    // have the main function create the threads and have each of them call this.
+//     // Next step is to break this out into being a thread entry point and to
+//     // have the main function create the threads and have each of them call this.
 
+// }
+
+void* CalculateFilter (void* arguments) {
+    struct argument_structure *args = (struct argument_structure *) arguments;
+
+    cout << "Hello from thread " << args->tid << endl;
+
+    pthread_exit(0);
 }
 
 /***********************************************************************************
@@ -296,6 +312,9 @@ int main (int argc, char** argv) {
     cout << "\nfile: " << filename << " depth: " << filterDepth << " threads: ";
     cout << numThreads << endl;
 
+    // Arrays for ID's of threads. Declared here so as to have access to numThreads.
+    pthread_t workers_tid[numThreads];  // Actual Thread ID's to join
+    int workers[numThreads];            // Int values for distribution logic
 
     // Get our matrix dimensions
     matrixDimension = GetMatrixDimension(filename);
@@ -303,14 +322,34 @@ int main (int argc, char** argv) {
 
     // Read the matrix file itself
     matrix = ReadMatrixFile(filename, matrixDimension);
+    cout << endl;
 
-    // Distribute Matrix Work
+    // Distribute the work to some threads
     for (int i = 0; i < numThreads; i++) {
-        CalculateFilter(matrix, matrixDimension, numThreads, i);
+        // Populate our struct to pass our arguments to our function
+        struct argument_structure threadArgs;
+        threadArgs.matrix = matrix;
+        threadArgs.matrixDim = matrixDimension;
+        threadArgs.numT = numThreads;
+        threadArgs.tid = i;
+
+        // Setting thread ID int
+        workers[i] = i;
+
+        // Create our worker thread
+        if (pthread_create(&workers_tid[i], NULL, CalculateFilter, (void *) &threadArgs)) {
+            printf("Failed to create worker thread %d\n", i);
+            return -1;
+        }
+
+        // Join the worker thread we just created
+        if (pthread_join(workers_tid[i], NULL)) {
+            printf("Failed to join worker thread %d\n", i);
+            return -1;
+        }
     }
-
-
-    cout << "Whole Matrix" << endl;
+    
+    cout << "\nWhole Matrix" << endl;
     PrettyPrintMatrix(matrix, matrixDimension);
 
     // Clean up before we exit, no memory leaks please
