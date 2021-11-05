@@ -23,7 +23,6 @@
 
 // TODO:    
 //          Pad matrix with 0's so we can more easily work with it
-//          Split matrix rows between given number of threads
 //          Have threads calculate their the new values for their given row(s)
 //          Have threads insert their new rows into a new 2D array
 //          Display the new array, and we're done
@@ -252,44 +251,34 @@ void GetMatrixWork (int matrixDim, int numT, int tid, int* startP, int* endP) {
  * 
  * DESCRIPTION:     Calculates the new convolution filter values for the matrix
  * 
- * PARAMETERS:      int**   :   matrix      -   the matrix to work on
- *                  int     :   matrixDim   -   the dimension of the matrix
- *                  int     :   numT        -   the number of threads being used
- *                  int     :   tid         -   the ID for this thread
+ * PARAMETERS:      void*   :   arguments   -   void pointer to argument_structure
  * 
- * RETURNS:         
+ * RETURNS:         None
  **********************************************************************************/ 
-// void* CalculateFilter (int** matrix, int matrixDim, int numT, int tid) {
-//     int start;
-//     int end;
-
-//     // Find our start and end points
-//     GetMatrixWork(matrixDim, numT, tid, &start, &end);
-    
-//     // If we have no work, break out
-//     if (start == -1 && end == -1)
-//         return;
-    
-//     // Just print out the rows we're supposed to work on for now
-//     printf("Thread %d of %d\n", tid, numT);
-
-//     for (int row = start; row < end; row++) {
-//         for (int i = 0; i < matrixDim; i++) {
-//             cout << matrix[row][i] << "\t";
-//         }
-//         cout << endl;
-//     }
-
-//     // Next step is to break this out into being a thread entry point and to
-//     // have the main function create the threads and have each of them call this.
-
-// }
-
 void* CalculateFilter (void* arguments) {
+    int start, end;
     struct argument_structure *args = (struct argument_structure *) arguments;
 
-    cout << "Hello from thread " << args->tid << endl;
+    // Find our start and end points
+    GetMatrixWork(args->matrixDim, args->numT, args->tid, &start, &end);
 
+    cout << "Hello from Thread " << args->tid << endl;
+
+    // If we have no work, break out
+    if (start == -1 && end == -1) {
+        cout << "No work for Thread " << args->tid << endl;
+        pthread_exit(0); 
+    }
+
+    for (int row = start; row < end; row++) {
+        for (int i = 0; i < args->matrixDim; i++) {
+            cout << args->matrix[row][i] << "\t";
+        }
+        cout << endl;
+    }
+    
+
+    cout << "Goodbye from thread " << args->tid << endl;
     pthread_exit(0);
 }
 
