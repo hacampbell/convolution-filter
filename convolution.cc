@@ -193,17 +193,18 @@ void CleanupMatrix (int** matrix, int matrixDim) {
 /***********************************************************************************
  * NAME:            GetMatrixWork
  * 
- * DESCRIPTION:     Determines the rows a given thread should perform calculations
- *                  on
+ * DESCRIPTION:     Determines the start and end point a given thread should 
+ *                  perform calculations on
  * 
- * PARAMETERS:      int**   :   matrix      -   the matrix that we're working on
- *                  int     :   matrixDim   -   the dimension of the matrix
+ * PARAMETERS:      int     :   matrixDim   -   the dimension of the matrix
  *                  int     :   numT        -   the number of threads being used
  *                  int     :   tid         -   the ID for this thread
+ *                  int*    :   startP      -   variable to store start point
+ *                  int*    :   endP        -   variable to store end point
  * 
  * RETURNS:         
  **********************************************************************************/ 
-void GetMatrixWork (int** matrix, int matrixDim, int numT, int tid, int* startP, int* endP) {
+void GetMatrixWork (int matrixDim, int numT, int tid, int* startP, int* endP) {
     int remainder = 0;
     int workload = 0;
     int start;
@@ -239,6 +240,44 @@ void GetMatrixWork (int** matrix, int matrixDim, int numT, int tid, int* startP,
 }
 
 /***********************************************************************************
+ * NAME:            CalculateFilter
+ * 
+ * DESCRIPTION:     Calculates the new convolution filter values for the matrix
+ * 
+ * PARAMETERS:      int**   :   matrix      -   the matrix to work on
+ *                  int     :   matrixDim   -   the dimension of the matrix
+ *                  int     :   numT        -   the number of threads being used
+ *                  int     :   tid         -   the ID for this thread
+ * 
+ * RETURNS:         
+ **********************************************************************************/ 
+void CalculateFilter (int** matrix, int matrixDim, int numT, int tid) {
+    int start;
+    int end;
+
+    // Find our start and end points
+    GetMatrixWork(matrixDim, numT, tid, &start, &end);
+    
+    // If we have no work, break out
+    if (start == -1 && end == -1)
+        return;
+    
+    // Just print out the rows we're supposed to work on for now
+    printf("Thread %d of %d\n", tid, numT);
+
+    for (int row = start; row < end; row++) {
+        for (int i = 0; i < matrixDim; i++) {
+            cout << matrix[row][i] << "\t";
+        }
+        cout << endl;
+    }
+
+    // Next step is to break this out into being a thread entry point and to
+    // have the main function create the threads and have each of them call this.
+
+}
+
+/***********************************************************************************
  * NAME:            main
  * DESCRIPTION:     Entrypoint for the program.
  * PARAMETERS:      None
@@ -267,13 +306,11 @@ int main (int argc, char** argv) {
 
     // Distribute Matrix Work
     for (int i = 0; i < numThreads; i++) {
-        int start, end;
-        GetMatrixWork(matrix, matrixDimension, numThreads, i, &start, &end);
-        printf("Thread: %d Start: %d End: %d\n", i, start, end);
+        CalculateFilter(matrix, matrixDimension, numThreads, i);
     }
 
 
-    cout << endl;
+    cout << "Whole Matrix" << endl;
     PrettyPrintMatrix(matrix, matrixDimension);
 
     // Clean up before we exit, no memory leaks please
